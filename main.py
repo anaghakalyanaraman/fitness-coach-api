@@ -3,11 +3,14 @@ from sqlalchemy.orm import Session
 from database import get_db, Base, engine
 from models import User, UserProfile, WorkoutLog
 from schemas import UserCreate, UserResponse, Token 
-from schemas import UserProfileCreate, UserProfileResponse, WorkoutLogCreate, WorkoutLogResponse
+from schemas import UserProfileCreate, UserProfileResponse, WorkoutLogCreate, WorkoutLogResponse, MealPlanRequest
 from auth import hash_password, verify_password, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
+from ai_service import generate_workout_plan
+from ai_service import generate_workout_plan, generate_meal_plan
+from typing import List
 
 
 Base.metadata.create_all(bind=engine)
@@ -24,6 +27,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 #auth Endpoints
 
@@ -111,4 +116,33 @@ async def delete_log(log_id: int, current_user = Depends(get_current_user), db =
     db.commit()
     return db_log 
 
+
+# POST /workout-plan - generate AI workout plan
+@app.post("/workout-plan")
+async def create_workout_plan(current_user = Depends(get_current_user), db = Depends(get_db)):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found. Please create your profile first.")
     
+    plan = generate_workout_plan(
+        age=profile.age,
+        weight=profile.weight,
+        height=profile.height,
+        goal=profile.goal,
+        activity_level=profile.activity_level
+    )
+    return plan
+
+
+@app.post("/nutrition/meal-plan")
+async def create_meal_plan(request: MealPlanRequest, current_user = Depends(get_current_user), db = Depends(get_db)):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    meal_plan = generate_meal_plan(
+        ingredients=request.ingredients,
+        goal=profile.goal,
+        dietary_preferences=profile.dietary_preferences
+    )
+    return meal_plan

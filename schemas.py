@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from enum import Enum
 
 class Token(BaseModel):
@@ -83,4 +83,7 @@ class WorkoutLogResponse(BaseModel):
     weight_kg: Optional[float] = None
     notes : Optional[str] = None
     logged_at : datetime
+
+class MealPlanRequest(BaseModel):
+    ingredients: List[str]
 
