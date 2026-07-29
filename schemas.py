@@ -87,3 +87,29 @@ class WorkoutLogResponse(BaseModel):
 class MealPlanRequest(BaseModel):
     ingredients: List[str]
 
+class ChatMessage(BaseModel):
+    message: str
+    conversation_history: List[dict] = []
+
+class ChatResponse(BaseModel):
+    response: str
+
+class RecipeRequest(BaseModel):
+    ingredients: List[str]
+    meal_type: str  # "Breakfast" / "Lunch" / "Dinner" / "Snack"
+
+class WeightLogCreate(BaseModel):
+    weight_kg: float
+
+class WeightLogResponse(BaseModel):
+    id: int
+    user_id: int
+    weight_kg: float
+    logged_at: datetime
+
+class ProgressResponse(BaseModel):
+    total_workouts: int
+    current_weight: Optional[float]
+    starting_weight: Optional[float]
+    weight_change: Optional[float]
+    recent_exercises: List[str]

@@ -11,7 +11,11 @@ from datetime import timedelta
 from ai_service import generate_workout_plan
 from ai_service import generate_workout_plan, generate_meal_plan
 from typing import List
-
+from ai_service import generate_workout_plan, generate_meal_plan, chat_with_coach, generate_recipe
+from schemas import ChatMessage, ChatResponse, RecipeRequest
+from models import User, UserProfile, WorkoutLog, WeightLog, SavedWorkoutPlan
+from schemas import WeightLogCreate, WeightLogResponse, ProgressResponse
+import json
 
 Base.metadata.create_all(bind=engine)
 
@@ -146,3 +150,93 @@ async def create_meal_plan(request: MealPlanRequest, current_user = Depends(get_
         dietary_preferences=profile.dietary_preferences
     )
     return meal_plan
+
+# POST /chat - conversational AI coach
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatMessage, current_user = Depends(get_current_user), db = Depends(get_db)):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    user_profile = {
+        "age": profile.age,
+        "weight": profile.weight,
+        "height": profile.height,
+        "goal": profile.goal,
+        "activity_level": profile.activity_level,
+        "dietary_preferences": profile.dietary_preferences
+    }
+    
+    response = chat_with_coach(
+        message=request.message,
+        conversation_history=request.conversation_history,
+        user_profile=user_profile
+    )
+    return ChatResponse(response=response)
+
+# POST /nutrition/recipe - generate detailed recipe
+@app.post("/nutrition/recipe")
+async def create_recipe(request: RecipeRequest, current_user = Depends(get_current_user), db = Depends(get_db)):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    recipe = generate_recipe(
+        ingredients=request.ingredients,
+        meal_type=request.meal_type,
+        goal=profile.goal
+    )
+    return recipe
+
+# POST /weight-log - log current weight
+@app.post("/weight-log", response_model=WeightLogResponse)
+async def log_weight(log: WeightLogCreate, current_user = Depends(get_current_user), db = Depends(get_db)):
+    db_log = WeightLog(user_id=current_user.id, weight_kg=log.weight_kg)
+    db.add(db_log)
+    db.commit()
+    db.refresh(db_log)
+    return db_log
+
+# GET /weight-log - get all weight logs
+@app.get("/weight-log")
+async def get_weight_logs(current_user = Depends(get_current_user), db = Depends(get_db)):
+    logs = db.query(WeightLog).filter(WeightLog.user_id == current_user.id).order_by(WeightLog.logged_at).all()
+    return logs
+
+# POST /workout-plan/save - save generated workout plan
+@app.post("/workout-plan/save")
+async def save_workout_plan(current_user = Depends(get_current_user), db = Depends(get_db)):
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    plan = generate_workout_plan(
+        age=profile.age,
+        weight=profile.weight,
+        height=profile.height,
+        goal=profile.goal,
+        activity_level=profile.activity_level
+    )
+    db_plan = SavedWorkoutPlan(user_id=current_user.id, plan_data=json.dumps(plan))
+    db.add(db_plan)
+    db.commit()
+    db.refresh(db_plan)
+    return plan
+
+# GET /progress - get user progress summary
+@app.get("/progress")
+async def get_progress(current_user = Depends(get_current_user), db = Depends(get_db)):
+    total_workouts = db.query(WorkoutLog).filter(WorkoutLog.user_id == current_user.id).count()
+    weight_logs = db.query(WeightLog).filter(WeightLog.user_id == current_user.id).order_by(WeightLog.logged_at).all()
+    recent_logs = db.query(WorkoutLog).filter(WorkoutLog.user_id == current_user.id).order_by(WorkoutLog.logged_at.desc()).limit(5).all()
+    
+    starting_weight = weight_logs[0].weight_kg if weight_logs else None
+    current_weight = weight_logs[-1].weight_kg if weight_logs else None
+    weight_change = round(current_weight - starting_weight, 2) if starting_weight and current_weight else None
+    
+    return {
+        "total_workouts": total_workouts,
+        "current_weight": current_weight,
+        "starting_weight": starting_weight,
+        "weight_change": weight_change,
+        "recent_exercises": [log.exercise for log in recent_logs]
+    }

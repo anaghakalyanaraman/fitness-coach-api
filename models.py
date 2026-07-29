@@ -37,4 +37,17 @@ class WorkoutLog(Base):
     notes : Mapped[Optional[str]] = mapped_column(Text, nullable = True)
     logged_at : Mapped[datetime] = mapped_column(DateTime, default = datetime.utcnow)
     
-         
+
+class WeightLog(Base):
+    __tablename__ = "weight_logs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    weight_kg: Mapped[float] = mapped_column(Float)
+    logged_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class SavedWorkoutPlan(Base):
+    __tablename__ = "saved_workout_plans"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    plan_data: Mapped[str] = mapped_column(Text)  # JSON stored as string
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
