@@ -98,7 +98,7 @@ async def update_user(profile : UserProfileCreate, current_user = Depends(get_cu
 #1. Create Workout logs
 @app.post("/logs",response_model= WorkoutLogResponse)
 async def create_workoutlog(wlog : WorkoutLogCreate, current_user = Depends(get_current_user), db = Depends(get_db)):
-    db_wlog = WorkoutLog(user_id = current_user.id, excercise = wlog.excercise, sets = wlog.sets, reps = wlog.reps, weight_kg = wlog.weight_kg, notes = wlog.notes)
+    db_wlog = WorkoutLog(user_id = current_user.id, exercise = wlog.exercise, sets = wlog.sets, reps = wlog.reps, weight_kg = wlog.weight_kg, notes = wlog.notes)
     db.add(db_wlog)
     db.commit()
     db.refresh(db_wlog)
