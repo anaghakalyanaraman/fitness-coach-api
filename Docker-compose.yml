@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: fitnesscoach
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d fitnesscoach"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://admin:password@db:5432/fitnesscoach
+      SECRET_KEY: cfe68313cd16087c9782c37146651a06cbfb96215c5f2fb1fe8a0113b0edf634
+      GROQ_API_KEY: your_groq_key_here
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
