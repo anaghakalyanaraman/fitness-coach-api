@@ -16,6 +16,8 @@ from schemas import ChatMessage, ChatResponse, RecipeRequest
 from models import User, UserProfile, WorkoutLog, WeightLog, SavedWorkoutPlan
 from schemas import WeightLogCreate, WeightLogResponse, ProgressResponse
 import json
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 Base.metadata.create_all(bind=engine)
 
@@ -34,7 +36,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str):
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 #auth Endpoints
 
