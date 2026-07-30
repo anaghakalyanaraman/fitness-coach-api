@@ -28,7 +28,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:5174",
-         "https://fitness-coach-ui-5ms1.vercel.app"
+         "https://fitness-coach-ui-5ms1.vercel.app",
          "https://fitness-coach-ui-qk6l.vercel.app"
     ],
     allow_credentials=True,
